@@ -1,4 +1,3 @@
-
 const { expect } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
@@ -92,18 +91,6 @@ class AssignAgreementPage {
             throw new Error('Document drop zone not found.');
         }
 
-        const sourceDetails = await signatureDraggable.evaluate(element => ({
-            tag: element.tagName,
-            className: element.className?.toString(),
-            text: element.innerText,
-            html: element.outerHTML.substring(0, 3000)
-        }));
-
-        console.log(
-            'SIGNATURE SOURCE:',
-            JSON.stringify(sourceDetails, null, 2)
-        );
-
         await signatureDraggable.dragTo(
             this.documentDropZone,
             {
@@ -115,77 +102,9 @@ class AssignAgreementPage {
             }
         );
 
-        console.log('Signature drag-and-drop action completed.');
+        console.log('Signature drag-and-drop completed.');
 
         await this.page.waitForTimeout(2000);
-
-        const diagnostics = await this.page.evaluate(() => {
-            const zone = document.querySelector(
-                '.fpe-doc-area.fpe-place-zone'
-            );
-
-            if (!zone) {
-                return {
-                    error: 'Document drop zone not found after drag.'
-                };
-            }
-
-            const rect = element => {
-                const r = element.getBoundingClientRect();
-
-                return {
-                    x: r.x,
-                    y: r.y,
-                    width: r.width,
-                    height: r.height
-                };
-            };
-
-            return {
-                zone: {
-                    className: zone.className,
-                    text: zone.innerText,
-                    html: zone.innerHTML.substring(0, 12000)
-                },
-
-                canvases: Array.from(
-                    zone.querySelectorAll('canvas')
-                ).map(canvas => ({
-                    width: canvas.width,
-                    height: canvas.height,
-                    rect: rect(canvas)
-                })),
-
-                overlays: Array.from(
-                    zone.querySelectorAll('*')
-                )
-                    .filter(element => {
-                        const r = element.getBoundingClientRect();
-
-                        return r.width > 0 &&
-                            r.height > 0 &&
-                            (
-                                /signature|field|overlay/i.test(
-                                    element.className?.toString() || ''
-                                ) ||
-                                /signature/i.test(element.innerText || '')
-                            );
-                    })
-                    .slice(0, 50)
-                    .map(element => ({
-                        tag: element.tagName,
-                        className: element.className?.toString(),
-                        text: element.innerText?.substring(0, 200),
-                        rect: rect(element),
-                        html: element.outerHTML.substring(0, 1500)
-                    }))
-            };
-        });
-
-        console.log(
-            'SIGNATURE PLACEMENT DIAGNOSTICS:',
-            JSON.stringify(diagnostics, null, 2)
-        );
 
         const evidenceDirectory = path.join(
             process.cwd(),
@@ -196,31 +115,22 @@ class AssignAgreementPage {
             recursive: true
         });
 
-        await this.page.screenshot({
-            path: path.join(
-                evidenceDirectory,
-                'signature-placement-diagnostic.png'
-            ),
-            fullPage: true
-        });
-
         const overlayCount = await this.documentDropZone.locator(
             '.fpe-field-overlay'
         ).count();
 
         if (overlayCount === 0) {
-            console.log(
-                'Expected .fpe-field-overlay was not found.'
-            );
-
-            console.log(
-                'Diagnostic screenshot and DOM details saved.'
-            );
+            await this.page.screenshot({
+                path: path.join(
+                    evidenceDirectory,
+                    'signature-placement-diagnostic.png'
+                ),
+                fullPage: true
+            });
 
             throw new Error(
                 'Signature placement could not be verified. ' +
-                'Inspect signature-placement-diagnostic.png ' +
-                'and terminal DOM diagnostics.'
+                'See evidence/signature-placement-diagnostic.png.'
             );
         }
 
@@ -279,8 +189,10 @@ class AssignAgreementPage {
         this.signatureReference = signatureReference;
 
         console.log(
-            'ORIGINAL SIGNATURE REFERENCE:',
-            JSON.stringify(signatureReference, null, 2)
+            'Signature position (% of page): x=' +
+            signatureReference.xPercent.toFixed(1) +
+            ', y=' +
+            signatureReference.yPercent.toFixed(1)
         );
 
         await this.page.screenshot({
@@ -415,20 +327,16 @@ class AssignAgreementPage {
             }
         }
 
-        console.log(
-            'POST RESPONSES CAPTURED DURING SEND:',
-            JSON.stringify(this.sendApiResponses, null, 2)
-        );
-
         const possibleEmailResponses =
             this.sendApiResponses.filter(item =>
                 /send|mail|email|assign/i.test(item.url)
             );
 
-        console.log(
-            'POSSIBLE EMAIL API RESPONSES:',
-            JSON.stringify(possibleEmailResponses, null, 2)
-        );
+        possibleEmailResponses.forEach(item => {
+            console.log(
+                'API ' + item.method + ' ' + item.status + ' - ' + item.url
+            );
+        });
 
         if (possibleEmailResponses.length === 0) {
             console.log(
@@ -629,40 +537,6 @@ class AssignAgreementPage {
 
         await this.page.waitForTimeout(1000);
 
-        const menuDetails = await this.page.evaluate(() => {
-            const elements = Array.from(
-                document.querySelectorAll(
-                    'button, a, [role="menuitem"], [role="button"]'
-                )
-            );
-
-            return {
-                pageText: document.body.innerText,
-
-                visibleActions: elements
-                    .filter(element => {
-                        const rect = element.getBoundingClientRect();
-
-                        return (
-                            rect.width > 0 &&
-                            rect.height > 0
-                        );
-                    })
-                    .map(element => ({
-                        tag: element.tagName,
-                        text: element.innerText?.trim(),
-                        ariaLabel: element.getAttribute('aria-label'),
-                        title: element.getAttribute('title'),
-                        className: element.className?.toString()
-                    }))
-            };
-        });
-
-        console.log(
-            'ACCOUNT MENU DETAILS:',
-            JSON.stringify(menuDetails, null, 2)
-        );
-
         const logoutButton = this.page
             .locator('button, a, [role="menuitem"]')
             .filter({
@@ -671,9 +545,7 @@ class AssignAgreementPage {
             .last();
 
         if (await logoutButton.count() === 0) {
-            throw new Error(
-                'Logout option not identified. Check ACCOUNT MENU DETAILS in terminal.'
-            );
+            throw new Error('Logout option not identified.');
         }
 
         await expect(logoutButton).toBeVisible({
@@ -710,5 +582,3 @@ class AssignAgreementPage {
 }
 
 module.exports = { AssignAgreementPage };
-
-
