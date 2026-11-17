@@ -11,19 +11,19 @@ Automated end-to-end test for the AiSign Pro staging site: https://cpastaging.ai
 
 Open a terminal inside the AiSignPro-Automation folder (the one containing package.json) and run:
 
-​```
+​````
+```
 npm install
-```
 npx playwright install chromium
-```
 npm test
-​```
+```
 
 To open the HTML report afterwards:
 
-​```
+```
 npm run test:report
-​```
+```
+````
 
 The report is generated in the `reports/` folder.
 
