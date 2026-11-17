@@ -78,3 +78,6 @@ Evidence: `evidence/BUG-02-downloaded-agreement.pdf`
 - "Cannot find module @playwright/test": run `npm install` inside the project folder.
 - "Executable doesn't exist": run `npx playwright install chromium`.
 - "enoent package.json": open the terminal inside the AiSignPro-Automation folder, not its parent.
+
+
+Note : "Built with AI assistance for debugging and code cleanup; test design, flow and bug findings are my own."
