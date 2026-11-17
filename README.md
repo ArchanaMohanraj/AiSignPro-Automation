@@ -14,9 +14,7 @@ Open a terminal inside the AiSignPro-Automation folder (the one containing packa
 ​```
 npm install
 ```
-```
 npx playwright install chromium
-```
 ```
 npm test
 ​```
